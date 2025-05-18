@@ -3,6 +3,8 @@ package com.enset.sdia.springjwt;
 import com.enset.sdia.springjwt.Repositories.AccountOperationRepository;
 import com.enset.sdia.springjwt.Repositories.BankAccountRepository;
 import com.enset.sdia.springjwt.Repositories.CustomerRepository;
+import com.enset.sdia.springjwt.Repositories.RoleRepository;
+import com.enset.sdia.springjwt.Services.AccountService;
 import com.enset.sdia.springjwt.Services.BankAccountService;
 import com.enset.sdia.springjwt.dtos.BankAccountDTO;
 import com.enset.sdia.springjwt.dtos.CurrentBankAccountDTO;
@@ -14,6 +16,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Date;
 import java.util.List;
@@ -30,50 +33,76 @@ public class SpringJwtApplication {
     @Bean
     CommandLineRunner start(CustomerRepository customerRepository,
                             BankAccountRepository bankAccountRepository,
-                            AccountOperationRepository accountOperationRepository){
+                            AccountOperationRepository accountOperationRepository,
+                            PasswordEncoder passwordEncoder,
+                            RoleRepository roleRepository,
+                            AccountService accountService) {
         return args -> {
-            Stream.of("Hassan","Yassine","Aicha").forEach(name->{
-                Customer customer=new Customer();
+            // Création des rôles
+            Role customerRole = new Role(null, "CUSTOMER", "Client standard", null);
+            Role adminRole = new Role(null, "ADMIN", "Administrateur", null);
+            roleRepository.save(customerRole);
+            roleRepository.save(adminRole);
+
+            // Création d'un compte admin
+            Account adminAccount = accountService.addNewAccount(
+                    "admin@admin.com",
+                    "admin123",
+                    "ADMIN"
+            );
+
+            // Création des clients avec leurs comptes
+            Stream.of("Hassan", "Yassine", "Aicha").forEach(name -> {
+                // Créer le compte d'authentification
+                Account account = accountService.addNewAccount(
+                        name.toLowerCase() + "@gmail.com",
+                        name + "1234",
+                        "CUSTOMER"
+                );
+
+                // Créer le client
+                Customer customer = new Customer();
                 customer.setName(name);
-                customer.setEmail(name+"@gmail.com");
+                customer.setEmail(name.toLowerCase() + "@gmail.com");
+                customer.setAccount(account);
+                account.setCustomer(customer);
                 customerRepository.save(customer);
-            });
-            customerRepository.findAll().forEach(cust->{
-                CurrentAccount currentAccount=new CurrentAccount();
+
+                // Créer les comptes bancaires pour le client
+                CurrentAccount currentAccount = new CurrentAccount();
                 currentAccount.setId(UUID.randomUUID().toString());
-                currentAccount.setBalance(Math.random()*90000);
+                currentAccount.setBalance(Math.random() * 90000);
                 currentAccount.setCreatedAt(new Date());
                 currentAccount.setStatus(AccountStatus.CREATED);
-                currentAccount.setCustomer(cust);
+                currentAccount.setCustomer(customer);
                 currentAccount.setOverDraft(9000);
                 bankAccountRepository.save(currentAccount);
 
-                SavingAccount savingAccount=new SavingAccount();
+                SavingAccount savingAccount = new SavingAccount();
                 savingAccount.setId(UUID.randomUUID().toString());
-                savingAccount.setBalance(Math.random()*90000);
+                savingAccount.setBalance(Math.random() * 90000);
                 savingAccount.setCreatedAt(new Date());
                 savingAccount.setStatus(AccountStatus.CREATED);
-                savingAccount.setCustomer(cust);
+                savingAccount.setCustomer(customer);
                 savingAccount.setInterestRate(5.5);
                 bankAccountRepository.save(savingAccount);
-
             });
-            bankAccountRepository.findAll().forEach(acc->{
-                for (int i = 0; i <10 ; i++) {
-                    AccountOperation accountOperation=new AccountOperation();
+
+            // Création des opérations bancaires
+            bankAccountRepository.findAll().forEach(acc -> {
+                for (int i = 0; i < 10; i++) {
+                    AccountOperation accountOperation = new AccountOperation();
                     accountOperation.setOperationDate(new Date());
-                    accountOperation.setAmount(Math.random()*12000);
-                    accountOperation.setType(Math.random()>0.5? OperationType.DEBIT: OperationType.CREDIT);
+                    accountOperation.setAmount(Math.random() * 12000);
+                    accountOperation.setType(Math.random() > 0.5 ? OperationType.DEBIT : OperationType.CREDIT);
                     accountOperation.setBankAccount(acc);
                     accountOperationRepository.save(accountOperation);
                 }
-
             });
         };
-
     }
 
-    @Bean
+    //@Bean
     CommandLineRunner commandLineRunner(BankAccountService bankAccountService){
         return args -> {
             Stream.of("Hassan","Imane","Mohamed").forEach(name->{

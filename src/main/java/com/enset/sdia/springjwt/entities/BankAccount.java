@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.util.Date;
 import java.util.List;
@@ -22,8 +24,11 @@ public abstract class BankAccount {
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Customer customer;
-
     @OneToMany(mappedBy = "bankAccount",fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private List<AccountOperation> accountOperations;
+
+
 }

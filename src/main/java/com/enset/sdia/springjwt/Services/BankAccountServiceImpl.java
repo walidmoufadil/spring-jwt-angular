@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,13 +31,43 @@ public class BankAccountServiceImpl implements BankAccountService {
     private BankAccountRepository bankAccountRepository;
     private AccountOperationRepository accountOperationRepository;
     private BankAccountMapperImpl dtoMapper;
+    private PasswordEncoder passwordEncoder;
+    private AccountService accountService;
 
     @Override
     public CustomerDTO saveCustomer(CustomerDTO customerDTO) {
-        log.info("Saving new Customer");
-        Customer customer=dtoMapper.fromCustomerDTO(customerDTO);
+        log.info("Saving new Customer with email: {}", customerDTO.getEmail());
+
+        // Vérifier si l'email existe déjà
+        if (customerRepository.findByEmail(customerDTO.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists: " + customerDTO.getEmail());
+        }
+
+        // Créer et sauvegarder le customer
+        Customer customer = dtoMapper.fromCustomerDTO(customerDTO);
         Customer savedCustomer = customerRepository.save(customer);
-        return dtoMapper.fromCustomer(savedCustomer);
+
+        try {
+            // Créer le compte avec l'email comme username
+            Account account = accountService.addNewAccount(
+                customerDTO.getEmail(),
+                customerDTO.getPassword(), // Utiliser le mot de passe non encodé
+                "CUSTOMER"
+            );
+
+            // Établir la relation bidirectionnelle
+            account.setCustomer(savedCustomer);
+            savedCustomer.setAccount(account);
+            // Sauvegarder le customer avec la relation
+            savedCustomer = customerRepository.save(savedCustomer);
+            log.info("Customer and Account created successfully for email: {}", customerDTO.getEmail());
+
+            return dtoMapper.fromCustomer(savedCustomer);
+        } catch (Exception e) {
+            log.error("Error while creating account for customer: {}", e.getMessage());
+            customerRepository.delete(savedCustomer);
+            throw new RuntimeException("Error creating account: " + e.getMessage());
+        }
     }
 
     @Override
@@ -165,8 +196,19 @@ public class BankAccountServiceImpl implements BankAccountService {
         return dtoMapper.fromCustomer(savedCustomer);
     }
     @Override
-    public void deleteCustomer(Long customerId){
-        customerRepository.deleteById(customerId);
+    public void deleteCustomer(Long customerId) throws CustomerNotFoundException {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomerNotFoundException("Customer Not found"));
+
+        // Détacher le compte du client avant la suppression
+        if (customer.getAccount() != null) {
+            Account account = customer.getAccount();
+            account.setCustomer(null);
+            customer.setAccount(null);
+        }
+
+        // Supprimer le client
+        customerRepository.delete(customer);
     }
     @Override
     public List<AccountOperationDTO> accountHistory(String accountId){
@@ -196,4 +238,20 @@ public class BankAccountServiceImpl implements BankAccountService {
         List<CustomerDTO> customerDTOS = customers.stream().map(cust -> dtoMapper.fromCustomer(cust)).collect(Collectors.toList());
         return customerDTOS;
     }
+
+    @Override
+    public List<BankAccountDTO> getCustomerAccounts(Long customerId) throws CustomerNotFoundException {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomerNotFoundException("Customer Not found"));
+        return customer.getBankAccounts().stream().map(account -> {
+            if (account instanceof SavingAccount) {
+                SavingAccount savingAccount = (SavingAccount) account;
+                return dtoMapper.fromSavingBankAccount(savingAccount);
+            } else {
+                CurrentAccount currentAccount = (CurrentAccount) account;
+                return dtoMapper.fromCurrentBankAccount(currentAccount);
+            }
+        }).collect(Collectors.toList());
+    }
 }
+
