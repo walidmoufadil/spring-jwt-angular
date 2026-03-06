@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ajout d'une base pour l'intégration Tailwind, conserve les styles globaux personnalisés si besoin */
+
+/* Styles personnalisés pour l'identité bancaire (optionnel, à compléter selon la charte graphique) */
+
+body {
+    @apply bg-[#f5f7fa] text-[#2c3e50] font-sans;
+}
+
+/* Styles globaux */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+:root {
+    --primary-color: #003b6f;
+    --secondary-color: #00254d;
+    --background-color: #f5f7fa;
+    --text-color: #2c3e50;
+    --border-color: #e1e5eb;
+}

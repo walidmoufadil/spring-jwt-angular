@@ -1,0 +1,52 @@
+<div class="chat-container min-h-screen flex flex-col bg-[#f5f7fa] font-sans">
+    <header class="chat-header bg-gradient-to-r from-[#003b6f] to-[#00254d] text-white shadow-md p-4">
+        <div class="header-content max-w-5xl mx-auto flex items-center gap-4">
+            <div class="bank-logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="bank-icon w-8 h-8 text-white">
+                    <path d="M12 1L1 10h3v10h16V10h3L12 1zm0 2.84L19.2 9H4.8L12 3.84z"/>
+                </svg>
+            </div>
+            <h1 class="text-xl font-semibold tracking-wide">Assistant Bancaire Virtuel</h1>
+        </div>
+    </header>
+
+    <main class="chat-messages flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+        <div #messageList class="message-list flex flex-col gap-4">
+            <div *ngFor="let message of messages"
+                 [class]="'message ' + (message.isBot ? 'bot-message' : 'user-message')"
+                 [ngClass]="message.isBot ? 'self-start' : 'self-end'">
+                <div class="message-content rounded-xl shadow-sm text-base leading-relaxed px-5 py-4 max-w-[80vw]"
+                     [ngClass]="{
+                        'bg-white border border-[#e1e5eb] text-[#2c3e50]': message.isBot,
+                        'bg-[#003b6f] text-white': !message.isBot,
+                        'table-message': message.type === 'table'
+                     }">
+                    <div [innerHTML]="formatMessage(message)"></div>
+                    <span class="message-time text-xs opacity-70 block mt-2">{{ message.timestamp | date:'HH:mm' }}</span>
+                </div>
+            </div>
+        </div>
+        <div *ngIf="isLoading" class="typing-indicator inline-flex items-center gap-2 p-4 bg-white rounded-xl shadow-sm">
+            <span class="w-2 h-2 bg-[#003b6f] rounded-full animate-bounce"></span>
+            <span class="w-2 h-2 bg-[#003b6f] rounded-full animate-bounce [animation-delay:0.2s]"></span>
+            <span class="w-2 h-2 bg-[#003b6f] rounded-full animate-bounce [animation-delay:0.4s]"></span>
+        </div>
+    </main>
+
+    <footer class="chat-input bg-white border-t border-[#e1e5eb] p-4">
+        <div class="input-container max-w-5xl mx-auto flex gap-4">
+            <input type="text"
+                   [(ngModel)]="newMessage"
+                   (keyup.enter)="sendMessage()"
+                   placeholder="Écrivez votre message ici..."
+                   [disabled]="isLoading"
+                   class="flex-1 px-4 py-3 border-2 border-[#e1e5eb] rounded-lg text-base focus:outline-none focus:border-[#003b6f] transition-colors" />
+            <button (click)="sendMessage()"
+                    [disabled]="!newMessage.trim() || isLoading"
+                    class="send-button px-6 py-3 bg-[#003b6f] text-white rounded-lg font-semibold transition-colors hover:bg-[#00254d] disabled:bg-[#c4c9d1] disabled:cursor-not-allowed">
+                <span *ngIf="!isLoading">Envoyer</span>
+                <span *ngIf="isLoading">Envoi...</span>
+            </button>
+        </div>
+    </footer>
+</div>
