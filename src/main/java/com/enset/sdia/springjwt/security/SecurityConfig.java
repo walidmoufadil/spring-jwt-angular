@@ -66,7 +66,7 @@ public class SecurityConfig {
         return httpSecurity
                 .csrf(csrf-> csrf.disable())
                 .sessionManagement(sm->sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(ar->ar.requestMatchers("/auth/**","/swagger-ui/**","/v3/api-docs/**").permitAll())
+                .authorizeHttpRequests(ar->ar.requestMatchers("/auth/**","/swagger-ui/**","/v3/api-docs/**","/mcp/**").permitAll())
                 .authorizeHttpRequests(ar->ar.anyRequest().authenticated())
                 .cors(Customizer.withDefaults())
                 .oauth2ResourceServer(oauth2->oauth2.jwt(Customizer.withDefaults()))
